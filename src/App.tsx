@@ -1,743 +1,46 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { 
-  User, Heart, Calendar, Pill, Shield, Plus, Bell, BarChart3, 
+  User as UserIcon, Heart, Calendar, Pill, Shield, Plus, Bell, BarChart3, 
   Users, MessageCircle, AlertTriangle, Phone, Mail, Clock,
   Activity, TrendingUp, CheckCircle, XCircle, Home, Settings,
   UserPlus, Crown, Star, Gift, Video, ShoppingCart, Stethoscope,
   FileText, Award, Target, ChevronRight, Baby, MapPin, Sparkles, Eye, Zap, FlaskConical as TestTube
 } from 'lucide-react';
-
-interface User {
-  user_id: string;
-  role: 'patient' | 'caregiver' | 'family_member' | 'doctor';
-  name: string;
-  email: string;
-  phone?: string;
-  age: number;
-  gender: 'male' | 'female';
-  family_id: string;
-  relationship?: string;
-  access_token: string;
-  points?: number;
-  patient_id?: string;
-  code?: string;
-}
-
-interface Family {
-  family_id: string;
-  family_name: string;
-  members: User[];
-  created_at: string;
-}
-
-interface Medication {
-  id: string;
-  name: string;
-  dosage: string;
-  frequency: string;
-  times: string[];
-  start_date: string;
-  end_date?: string;
-  active: boolean;
-  taken_today?: boolean;
-  member_id: string;
-}
-
-interface Appointment {
-  id: string;
-  title: string;
-  type: 'doctor' | 'telemedicine' | 'lab_test';
-  doctor_name?: string;
-  appointment_date: string;
-  location?: string;
-  notes?: string;
-  member_id: string;
-  status: 'scheduled' | 'completed' | 'cancelled';
-}
-
-interface Vital {
-  id: string;
-  type: string;
-  value: string;
-  unit: string;
-  recorded_at: string;
-  member_id: string;
-}
-
-interface MenstrualData {
-  id: string;
-  cycle_start: string;
-  cycle_length: number;
-  symptoms: string[];
-  flow_intensity: string;
-  member_id: string;
-}
-
-interface EmergencyContact {
-  id: string;
-  name: string;
-  relationship: string;
-  phone: string;
-  priority: 'primary' | 'secondary';
-  family_id: string;
-}
-
-interface HealthGoal {
-  id: string;
-  title: string;
-  target_value: number;
-  current_value: number;
-  unit: string;
-  deadline: string;
-  member_id: string;
-  completed: boolean;
-}
-
-interface WellnessChallenge {
-  id: string;
-  name: string;
-  description: string;
-  progress: number;
-  points: number;
-  family_progress?: { [key: string]: number };
-  participants: string[];
-}
-
-interface Coupon {
-  id: string;
-  title: string;
-  description: string;
-  points_required: number;
-  category: string;
-  expires_at: string;
-}
-
-const sampleCoupons: Coupon[] = [
-  { id: '1', title: '20% Off Health Supplements', description: 'Vitamins and nutritional supplements', points_required: 500, category: 'Health', expires_at: '2025-12-31' },
-  { id: '2', title: 'Free Wellness Consultation', description: '30-minute health consultation', points_required: 1000, category: 'Consultation', expires_at: '2025-11-30' },
-  { id: '3', title: 'Fitness Equipment Discount', description: '15% off exercise equipment', points_required: 750, category: 'Fitness', expires_at: '2025-10-31' },
-  { id: '4', title: 'Healthy Meal Delivery', description: '25% off organic meal plans', points_required: 600, category: 'Nutrition', expires_at: '2025-12-15' }
-];
-
-// AI Integration Function
-const getAIHealthInsight = async (vitals: Vital[], symptoms: string[], member: User) => {
-  const API_KEY = 'AIzaSyDaip6bX94BuBb4BuO7EVhmZrXhzpim52Y';
-  
-  try {
-    // Mock AI response for demo - in production, this would call Google AI API
-    const mockInsights = {
-      risk_level: vitals.some(v => v.type === 'bp' && parseInt(v.value.split('/')[0]) > 140) ? 'high' : 'low',
-      recommendations: [
-        'Monitor blood pressure regularly',
-        'Consider reducing sodium intake',
-        'Increase physical activity gradually'
-      ],
-      predicted_trends: 'Blood pressure may increase by 5% over the next month based on current patterns',
-      confidence: 0.87
-    };
-    
-    return mockInsights;
-  } catch (error) {
-    console.error('AI API Error:', error);
-    return {
-      risk_level: 'unknown',
-      recommendations: ['Consult with your healthcare provider'],
-      predicted_trends: 'Unable to generate predictions at this time',
-      confidence: 0
-    };
-  }
-};
-
-const LineChart: React.FC<{ data: number[]; labels: string[]; color?: string; title: string }> = React.memo(({ 
-  data, 
-  labels, 
-  color = "#60a5fa", 
-  title 
-}) => {
-  const maxValue = Math.max(...data);
-  const minValue = Math.min(...data);
-  const padding = 20;
-  const chartWidth = 300;
-  const chartHeight = 150;
-  
-  const normalizedData = data.map(value => 
-    chartHeight - padding - ((value - minValue) / (maxValue - minValue || 1)) * (chartHeight - padding * 2)
-  );
-  
-  const points = normalizedData.map((y, i) => {
-    const x = padding + (i / (data.length - 1)) * (chartWidth - padding * 2);
-    return `${x},${y}`;
-  }).join(' ');
-  
-  return (
-    <div className="bg-gradient-to-br from-white/90 to-blue-50/50 backdrop-blur-lg p-4 rounded-2xl shadow-xl border border-blue-100">
-      <h3 className="text-lg font-bold mb-4 text-gray-800">{title}</h3>
-      <svg width={chartWidth} height={chartHeight} className="w-full">
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-          <line
-            key={i}
-            x1={padding}
-            y1={padding + ratio * (chartHeight - padding * 2)}
-            x2={chartWidth - padding}
-            y2={padding + ratio * (chartHeight - padding * 2)}
-            stroke="#e5e7eb"
-            strokeWidth={1}
-          />
-        ))}
-        
-        <polyline
-          fill="none"
-          stroke={color}
-          strokeWidth={3}
-          points={points}
-          className="drop-shadow-sm"
-        />
-        
-        {normalizedData.map((y, i) => {
-          const x = padding + (i / (data.length - 1)) * (chartWidth - padding * 2);
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r={5}
-              fill={color}
-              className="transition-all duration-300 hover:r-7 drop-shadow-sm"
-            />
-          );
-        })}
-        
-        {labels.map((label, i) => {
-          if (i % Math.ceil(labels.length / 5) !== 0) return null;
-          const x = padding + (i / (data.length - 1)) * (chartWidth - padding * 2);
-          return (
-            <text
-              key={i}
-              x={x}
-              y={chartHeight - 5}
-              textAnchor="middle"
-              fontSize="10"
-              fill="#6b7280"
-            >
-              {label}
-            </text>
-          );
-        })}
-      </svg>
-    </div>
-  );
-});
-
-const DonutChart: React.FC<{ values: number[]; labels: string[]; colors: string[]; title: string }> = React.memo(({ 
-  values, 
-  labels, 
-  colors, 
-  title 
-}) => {
-  const total = values.reduce((sum, value) => sum + value, 0);
-  const chartSize = 120;
-  const center = chartSize / 2;
-  const radius = center - 10;
-  
-  let currentAngle = 0;
-  
-  return (
-    <div className="bg-gradient-to-br from-white/90 to-green-50/50 backdrop-blur-lg p-4 rounded-2xl shadow-xl border border-green-100">
-      <h3 className="text-lg font-bold mb-4 text-gray-800">{title}</h3>
-      <div className="flex items-center justify-center">
-        <svg width={chartSize} height={chartSize} className="mx-auto">
-          {values.map((value, i) => {
-            const angle = (value / total) * 360;
-            const largeArcFlag = angle > 180 ? 1 : 0;
-            const startAngle = currentAngle;
-            const endAngle = startAngle + angle;
-            
-            const startX = center + radius * Math.cos(startAngle * Math.PI / 180);
-            const startY = center + radius * Math.sin(startAngle * Math.PI / 180);
-            const endX = center + radius * Math.cos(endAngle * Math.PI / 180);
-            const endY = center + radius * Math.sin(endAngle * Math.PI / 180);
-            
-            const pathData = [
-              `M ${center} ${center}`,
-              `L ${startX} ${startY}`,
-              `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX} ${endY}`,
-              'Z'
-            ].join(' ');
-            
-            currentAngle = endAngle;
-            
-            return (
-              <path
-                key={i}
-                d={pathData}
-                fill={colors[i]}
-                className="transition-all duration-300 opacity-80 hover:opacity-100"
-              />
-            );
-          })}
-          
-          <circle cx={center} cy={center} r={radius * 0.5} fill="white" />
-          <text
-            x={center}
-            y={center}
-            textAnchor="middle"
-            dy="0.3em"
-            fontSize="14"
-            fontWeight="bold"
-            fill="#4b5563"
-          >
-            {total}
-          </text>
-        </svg>
-      </div>
-      
-      <div className="mt-4 space-y-2">
-        {labels.map((label, i) => (
-          <div key={i} className="flex items-center text-sm">
-            <div 
-              className="w-3 h-3 rounded-full mr-2" 
-              style={{ backgroundColor: colors[i] }}
-            ></div>
-            <span className="text-gray-700">{label}</span>
-            <span className="ml-auto text-gray-600 font-medium">
-              {Math.round((values[i] / total) * 100)}%
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-const BarChart: React.FC<{ values: number[]; labels: string[]; color?: string; title: string }> = React.memo(({
-  values,
-  labels,
-  color = '#34d399',
-  title
-}) => {
-  const maxValue = Math.max(...values, 1);
-  const chartWidth = 300;
-  const chartHeight = 150;
-  const padding = 24;
-  const barWidth = (chartWidth - padding * 2) / values.length - 8;
-
-  return (
-    <div className="bg-gradient-to-br from-white/90 to-emerald-50/50 backdrop-blur-lg p-4 rounded-2xl shadow-xl border border-emerald-100">
-      <h3 className="text-lg font-bold mb-4 text-gray-800">{title}</h3>
-      <svg width={chartWidth} height={chartHeight} className="w-full">
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio, i) => (
-          <line key={i} x1={padding} y1={padding + ratio * (chartHeight - padding * 2)} x2={chartWidth - padding} y2={padding + ratio * (chartHeight - padding * 2)} stroke="#e5e7eb" strokeWidth={1} />
-        ))}
-        {values.map((v, i) => {
-          const x = padding + i * (barWidth + 8);
-          const h = ((v / maxValue) * (chartHeight - padding * 2)) || 0;
-          const y = chartHeight - padding - h;
-          return (
-            <g key={i}>
-              <rect x={x} y={y} width={barWidth} height={h} fill={color} className="opacity-80 hover:opacity-100 transition-opacity" />
-              {h > 0 && (
-                <text x={x + barWidth / 2} y={y - 6} textAnchor="middle" fontSize="10" fill="#374151" className="font-bold">
-                  {v}
-                </text>
-              )}
-            </g>
-          );
-        })}
-        {labels.map((label, i) => (
-          <text key={i} x={padding + i * (barWidth + 8) + barWidth / 2} y={chartHeight - 6} textAnchor="middle" fontSize="10" fill="#6b7280">
-            {label}
-          </text>
-        ))}
-      </svg>
-    </div>
-  );
-});
+import {
+  Appointment,
+  Coupon,
+  EmergencyContact,
+  Family,
+  HealthGoal,
+  Medication,
+  MenstrualData,
+  User,
+  Vital,
+  WellnessChallenge
+} from './types';
+import { sampleCoupons } from './constants/sampleCoupons';
+import { initializeSampleData as createSampleData } from './data/initializeSampleData';
+import { getAIHealthInsight } from './services/aiInsightsService';
+import { authenticate } from './services/authService';
+import { clearSession, getStoredFamily, getStoredUser, saveSession, saveUser } from './services/storageService';
+import { useLiveVitals } from './hooks/useLiveVitals';
+import LandingPage from './features/auth/LandingPage';
+import AuthForm from './features/auth/AuthForm';
+import FamilyMemberSelector from './components/layout/FamilyMemberSelector';
+import MedicationManager from './features/medications/MedicationManager';
+import AppointmentManager from './features/appointments/AppointmentManager';
+import VitalManager from './features/vitals/VitalManager';
+import HealthGoalsManager from './features/goals/HealthGoalsManager';
+import BarChart from './components/charts/BarChart';
+import DonutChart from './components/charts/DonutChart';
+import LineChart from './components/charts/LineChart';
 
 const AegisLink: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [loading, setLoading] = useState(false);
-  const [medications, setMedications] = useState<Medication[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [vitals, setVitals] = useState<Vital[]>([]);
-  const [menstrualData, setMenstrualData] = useState<MenstrualData[]>([]);
-  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
-  const [healthGoals, setHealthGoals] = useState<HealthGoal[]>([]);
-  const [wellnessChallenges, setWellnessChallenges] = useState<WellnessChallenge[]>([]);
-  const [showChatbot, setShowChatbot] = useState(false);
-  const [showTelemedicine, setShowTelemedicine] = useState(false);
-  const [showTelepharmacy, setShowTelepharmacy] = useState(false);
-  const [showPointsStore, setShowPointsStore] = useState(false);
-  const [aiInsights, setAiInsights] = useState<any>(null);
-  const [showFamilyView, setShowFamilyView] = useState(false);
-  const [showSymptomChecker, setShowSymptomChecker] = useState(false);
-  const [showPredictiveInsights, setShowPredictiveInsights] = useState(false);
-  const [showLanding, setShowLanding] = useState<boolean>(() => {
-    const userData = JSON.parse(localStorage.getItem('aegis_user') || 'null');
-    return !userData; // show landing if no user yet
-  });
-  const [frameLoading, setFrameLoading] = useState<{ visible: boolean; label: string }>({ visible: false, label: '' });
-  const navTimeoutRef = React.useRef<number | null>(null);
-  const initRef = React.useRef(false);
-
-  const navigateTo = useCallback((tabKey: string, label?: string) => {
-    if (navTimeoutRef.current) {
-      clearTimeout(navTimeoutRef.current);
-      navTimeoutRef.current = null;
-    }
-    setFrameLoading({ visible: true, label: label || 'Loading' });
-    navTimeoutRef.current = window.setTimeout(() => {
-      setActiveTab(tabKey);
-      setFrameLoading({ visible: false, label: '' });
-      navTimeoutRef.current = null;
-    }, 550);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (navTimeoutRef.current) {
-        clearTimeout(navTimeoutRef.current);
-        navTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  const initializeSampleData = (user: User, family: Family | null) => {
-    const familyId = family?.family_id || '';
-    const members = family?.members && family.members.length ? family.members : [user];
-
-    const meds: Medication[] = [];
-    const appts: Appointment[] = [];
-    const vitalsAll: Vital[] = [];
-    const goalsAll: HealthGoal[] = [];
-    const famProgress: { [key: string]: number } = {};
-    const menstrualAll: MenstrualData[] = [];
-
-    // generate last 12 days vitals per member for realistic charts
-    const days = Array.from({ length: 12 }).map((_, i) => new Date(Date.now() - (11 - i) * 864e5));
-
-    members.forEach((m, idx) => {
-      // medications per member
-      meds.push({ id: `${m.user_id}-m1`, name: 'Lisinopril', dosage: '10mg', frequency: 'once daily', times: ['08:00'], start_date: '2024-01-01', active: true, taken_today: idx % 2 === 0, member_id: m.user_id });
-      meds.push({ id: `${m.user_id}-m2`, name: 'Vitamin D3', dosage: '1000IU', frequency: 'once daily', times: ['09:00'], start_date: '2024-03-01', active: true, taken_today: true, member_id: m.user_id });
-
-      // appointments per member
-      appts.push({ id: `${m.user_id}-a1`, title: 'General Checkup', type: 'doctor', doctor_name: 'Dr. Samarth Pandey', appointment_date: '2025-09-20T11:00:00', location: 'Health Center', notes: 'Annual exam', member_id: m.user_id, status: 'scheduled' });
-
-      // vitals per member (12-day series)
-      days.forEach((d, j) => {
-        const systolic = 110 + idx * 4 + Math.round(Math.sin(j / 2) * 6) + Math.round(Math.random() * 3);
-        const diastolic = 75 + Math.round(Math.cos(j / 2) * 4);
-        vitalsAll.push({ id: `${m.user_id}-bp-${j}`, type: 'bp', value: `${systolic}/${diastolic}`, unit: 'mmHg', recorded_at: d.toISOString(), member_id: m.user_id });
-      });
-      days.forEach((d, j) => {
-        const weight = 70 + idx * 2 + Math.round(Math.sin(j / 3) * 1);
-        vitalsAll.push({ id: `${m.user_id}-wt-${j}`, type: 'weight', value: `${weight}`, unit: 'kg', recorded_at: d.toISOString(), member_id: m.user_id });
-      });
-
-      // goals per member (expanded)
-      goalsAll.push({ id: `${m.user_id}-g1`, title: 'Daily Steps', target_value: 10000, current_value: 6000 + idx * 1000, unit: 'steps', deadline: '2025-12-31', member_id: m.user_id, completed: false });
-      goalsAll.push({ id: `${m.user_id}-g2`, title: 'Weight Goal', target_value: 68, current_value: 70 + idx, unit: 'kg', deadline: '2025-11-30', member_id: m.user_id, completed: false });
-      goalsAll.push({ id: `${m.user_id}-g3`, title: 'Blood Pressure Control', target_value: 120, current_value: 128 + idx * 2, unit: 'mmHg (systolic)', deadline: '2025-10-31', member_id: m.user_id, completed: false });
-      goalsAll.push({ id: `${m.user_id}-g4`, title: 'Daily Water Intake', target_value: 8, current_value: 5 + (idx % 3), unit: 'glasses', deadline: '2025-09-30', member_id: m.user_id, completed: false });
-      goalsAll.push({ id: `${m.user_id}-g5`, title: 'Sleep Duration', target_value: 8, current_value: 6 + (idx % 2), unit: 'hours/night', deadline: '2025-10-15', member_id: m.user_id, completed: false });
-
-      // menstrual data for female members (3 recent cycles)
-      if (m.gender === 'female') {
-        const cycleLength = 28 + (idx % 3) - 1; // 27-29
-        const startDates = [0, 1, 2].map(n => new Date(Date.now() - (n * cycleLength) * 864e5));
-        startDates.forEach((date, n) => {
-          const iso = new Date(date.getFullYear(), date.getMonth(), date.getDate() - 2).toISOString().slice(0, 10);
-          menstrualAll.push({
-            id: `${m.user_id}-mc-${n}`,
-            cycle_start: iso,
-            cycle_length: cycleLength,
-            symptoms: n === 0 ? ['Cramps', 'Fatigue'] : n === 1 ? ['Headache'] : ['Mood swings', 'Bloating'],
-            flow_intensity: n === 0 ? 'medium' : n === 1 ? 'light' : 'heavy',
-            member_id: m.user_id
-          });
-        });
-      }
-
-      famProgress[m.user_id] = 60 + idx * 10;
-    });
-
-    setMedications(meds);
-    setAppointments(appts);
-    setVitals(vitalsAll);
-    setEmergencyContacts([
-      { id: '1', name: 'Emergency Services', relationship: 'Emergency', phone: '911', priority: 'primary', family_id: familyId }
-    ]);
-    setHealthGoals(goalsAll);
-    setWellnessChallenges([
-      { id: '1', name: 'Daily Steps Challenge', description: 'Walk 10,000 steps every day', progress: 72, points: 250, family_progress: famProgress, participants: members.map(m => m.user_id) },
-      { id: '2', name: 'Medication Adherence', description: 'Take all medications on time', progress: 88, points: 400, family_progress: famProgress, participants: members.map(m => m.user_id) }
-    ]);
-    setMenstrualData(menstrualAll);
-
-    // Generate AI insights for current user
-    generateAIInsights(user);
-  };
-
-  const generatingInsightsRef = React.useRef(false);
-  const generateAIInsights = async (user: User) => {
-    if (generatingInsightsRef.current) return;
-    generatingInsightsRef.current = true;
-    const memberVitals = vitals.filter(v => v.member_id === user.user_id);
-    const insights = await getAIHealthInsight(memberVitals, [], user);
-    setAiInsights(insights);
-    generatingInsightsRef.current = false;
-  };
-
-  useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
-    const userData = JSON.parse(localStorage.getItem('aegis_user') || 'null');
-    const familyData = JSON.parse(localStorage.getItem('aegis_family') || 'null');
-    if (userData && familyData) {
-      setCurrentUser(userData);
-      setCurrentFamily(familyData);
-      setSelectedMember(userData);
-      initializeSampleData(userData, familyData);
-    }
-  }, []);
-
-  // Optimized live data simulator with throttling
-  const liveIntervalRef = React.useRef<number | null>(null);
-  const lastUpdateRef = React.useRef<number>(0);
-  
-  useEffect(() => {
-    if (!currentFamily) {
-      if (liveIntervalRef.current) {
-        clearInterval(liveIntervalRef.current);
-        liveIntervalRef.current = null;
-      }
-      return;
-    }
-    if (liveIntervalRef.current) {
-      clearInterval(liveIntervalRef.current);
-      liveIntervalRef.current = null;
-    }
-    
-    liveIntervalRef.current = window.setInterval(() => {
-      const now = Date.now();
-      if (now - lastUpdateRef.current < 10000) return; // Throttle to max once per 10s
-      
-      const members = currentFamily.members || [];
-      if (members.length === 0) return;
-      
-      const randomMember = members[Math.floor(Math.random() * members.length)];
-      const systolic = 110 + Math.floor(Math.random() * 15);
-      const diastolic = 70 + Math.floor(Math.random() * 8);
-      
-      const newVital: Vital = {
-        id: `live-${now}`,
-        type: 'bp',
-        value: `${systolic}/${diastolic}`,
-        unit: 'mmHg',
-        recorded_at: new Date(now).toISOString(),
-        member_id: randomMember.user_id
-      };
-      
-      setVitals(prev => {
-        const updated = [newVital, ...prev.filter(v => v.id !== newVital.id)];
-        return updated.slice(0, 120); // Reduced from 240
-      });
-      
-      lastUpdateRef.current = now;
-    }, 12000); // Increased interval from 8s to 12s
-    
-    return () => {
-      if (liveIntervalRef.current) {
-        clearInterval(liveIntervalRef.current);
-        liveIntervalRef.current = null;
-      }
-    };
-  }, [currentFamily]);
-
-  const handleAuth = async (formData: any, isLogin: boolean) => {
-    setLoading(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    try {
-      let family: Family | null = null;
-
-      const userData: User = {
-        user_id: `USER_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-        role: formData.role as User['role'],
-        name: formData.name || 'Demo User',
-        email: formData.email,
-        phone: formData.phone,
-        age: parseInt(formData.age) || 25,
-        gender: formData.gender as 'male' | 'female',
-        family_id: '',
-        access_token: `token_${Math.random().toString(36).substr(2, 16)}`,
-        points: 0,
-        patient_id: undefined,
-        code: undefined
-      };
-
-      if (userData.role === 'patient' || userData.role === 'family_member') {
-        if (formData.joinFamily && formData.familyId) {
-          family = {
-            family_id: formData.familyId,
-            family_name: 'Sample Family',
-            members: [],
-            created_at: new Date().toISOString()
-          };
-        } else {
-          family = {
-            family_id: `FAMILY_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-            family_name: formData.familyName || `${formData.name}'s Family`,
-            members: [],
-            created_at: new Date().toISOString()
-          };
-        }
-        userData.family_id = family.family_id;
-      } else if (userData.role === 'caregiver' || userData.role === 'doctor') {
-        // Create a hidden demo family context to enable dashboards without asking for Family ID
-        family = {
-          family_id: `DEMO_${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-          family_name: 'Demo Family',
-          members: [],
-          created_at: new Date().toISOString()
-        };
-      }
-
-      if (family) {
-        const makeMember = (overrides: Partial<User>): User => ({
-          user_id: `USER_${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
-          role: 'patient',
-          name: 'Demo Patient',
-          email: `${Math.random().toString(36).slice(2,7)}@demo.com`,
-          age: 30,
-          gender: 'male',
-          family_id: family!.family_id,
-          access_token: 'token_demo',
-          patient_id: `PID-${Math.random().toString(36).substr(2,6).toUpperCase()}`,
-          ...overrides
-        });
-
-        const demoMembers: User[] = [];
-
-        if (userData.role === 'patient' || userData.role === 'family_member') {
-          demoMembers.push(makeMember({ name: 'Alex Johnson', gender: 'male', age: 35 }));
-          demoMembers.push(makeMember({ name: 'Priya Sharma', gender: 'female', age: 32 }));
-        }
-
-        if (userData.role === 'caregiver' || userData.role === 'doctor') {
-          demoMembers.push(makeMember({ name: 'John Doe', gender: 'male', age: 54 }));
-          demoMembers.push(makeMember({ name: 'Jane Doe', gender: 'female', age: 49 }));
-          demoMembers.push(makeMember({ name: 'Samir Khan', gender: 'male', age: 27 }));
-        }
-
-        // ensure patient ids for all patients including current user if patient
-        if (userData.role === 'patient') {
-          userData.patient_id = `PID-${Math.random().toString(36).substr(2,6).toUpperCase()}`;
-        }
-        family.members = [userData, ...demoMembers];
-      }
-
-      setCurrentUser(userData);
-      setCurrentFamily(family);
-      setSelectedMember(userData);
-      
-      localStorage.setItem('aegis_user', JSON.stringify(userData));
-      localStorage.setItem('aegis_family', JSON.stringify(family));
-      
-      initializeSampleData(userData, family);
-    } catch (error) {
-      alert('Authentication failed. Please try again.');
-    }
-    setLoading(false);
-  };
-
-  const logout = () => {
-    setCurrentUser(null);
-    setCurrentFamily(null);
-    setSelectedMember(null);
-    localStorage.removeItem('aegis_user');
-    localStorage.removeItem('aegis_family');
-    setActiveTab('dashboard');
-  };
-
-  const AuthForm: React.FC = () => {
-    const [formData, setFormData] = useState({
-      email: '',
-      password: '',
-      name: '',
-      role: 'patient',
-      phone: '',
-      age: '',
-      gender: 'male',
-      joinFamily: false,
-      familyId: '',
-      familyName: ''
-    });
-
-    const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      await handleAuth(formData, authMode === 'login');
-    };
-
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50/30 via-yellow-50/20 to-blue-50/40 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-100/20 to-green-100/20 backdrop-blur-3xl"></div>
-        <div className="relative bg-white/90 backdrop-blur-xl p-8 rounded-3xl shadow-2xl border border-blue-100/50 w-full max-w-lg transform transition-all duration-500 hover:shadow-3xl">
-          <div className="text-center mb-8">
-            <div className="relative">
-              <Shield className="h-16 w-16 text-blue-500 mx-auto mb-4 drop-shadow-lg animate-pulse" />
-              <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-400 rounded-full animate-bounce"></div>
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
-              Aegis Link
-            </h1>
-            <p className="text-gray-600 font-medium">Family Health Management</p>
-          </div>
-
-          <div className="flex mb-6 bg-blue-50/50 rounded-2xl p-1">
-            <button
-              onClick={() => setAuthMode('login')}
-              className={`flex-1 py-3 text-center rounded-xl transition-all duration-300 font-medium ${
-                authMode === 'login' 
-                  ? 'bg-blue-500 text-white shadow-lg transform scale-105' 
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setAuthMode('signup')}
-              className={`flex-1 py-3 text-center rounded-xl transition-all duration-300 font-medium ${
-                authMode === 'signup' 
-                  ? 'bg-blue-500 text-white shadow-lg transform scale-105' 
-                  : 'text-gray-600 hover:text-blue-600'
-              }`}
-            >
-              Sign Up
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {authMode === 'signup' && (
-              <>
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  required
-                />
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <input
-                    type="number"
                     placeholder="Age"
                     className="p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
                     value={formData.age}
@@ -844,132 +147,6 @@ const AegisLink: React.FC = () => {
             <p className="mb-2 font-medium">Demo Access:</p>
             <p>Use any email/password to explore the family health system</p>
           </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Simple landing with animated particles background (canvas) and CTA
-  const Landing: React.FC = () => {
-    useEffect(() => {
-      const canvas = document.getElementById('aegis-particles') as HTMLCanvasElement | null;
-      if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      let animationId = 0;
-      const particles = Array.from({ length: 28 }).map(() => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: (Math.random() - 0.5) * 0.6,
-        r: 1.5 + Math.random() * 2,
-      }));
-      const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-      resize();
-      window.addEventListener('resize', resize);
-      const loop = () => {
-        if (document.hidden) {
-          animationId = requestAnimationFrame(loop);
-          return;
-        }
-        if (!ctx) return;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgba(37,99,235,0.7)';
-        particles.forEach(p => {
-          p.x += p.vx; p.y += p.vy;
-          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fill();
-          // sparkly trail
-          ctx.beginPath();
-          ctx.arc(p.x - p.vx * 6, p.y - p.vy * 6, Math.max(0.5, p.r - 1), 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(16,185,129,0.35)';
-          ctx.fill();
-        });
-        // subtle connecting lines
-        ctx.strokeStyle = 'rgba(99,102,241,0.12)';
-        particles.forEach((a, i) => {
-          for (let j = i + 1; j < particles.length; j++) {
-            const b = particles[j];
-            const dx = a.x - b.x; const dy = a.y - b.y; const d = Math.sqrt(dx*dx + dy*dy);
-            if (d < 100) {
-              ctx.globalAlpha = (100 - d) / 200;
-              ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.globalAlpha = 1;
-            }
-          }
-        });
-        animationId = requestAnimationFrame(loop);
-      };
-      animationId = requestAnimationFrame(loop);
-      return () => { cancelAnimationFrame(animationId); window.removeEventListener('resize', resize); };
-    }, []);
-
-    return (
-      <div className="min-h-screen relative overflow-hidden">
-        <canvas id="aegis-particles" className="fixed inset-0 will-change-transform" />
-        <div className="absolute inset-0" style={{
-          background: 'radial-gradient(1000px 400px at 20% 10%, rgba(59,130,246,0.15), transparent), radial-gradient(800px 300px at 80% 20%, rgba(16,185,129,0.15), transparent)'
-        }} />
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-screen text-center p-6">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="mb-6">
-            <div className="inline-flex items-center justify-center h-20 w-20 rounded-3xl bg-white/20 backdrop-blur-xl shadow-[0_20px_60px_rgba(0,0,0,0.15)] border border-white/30">
-              <Shield className="h-10 w-10 text-blue-600" />
-            </div>
-          </motion.div>
-          <motion.h1 initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.6 }} className="text-4xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 via-cyan-500 to-green-600 bg-clip-text text-transparent">
-            Aegis Link
-          </motion.h1>
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.25, duration: 0.6 }} className="mt-4 max-w-2xl text-base md:text-lg text-gray-700">
-            Smart, beautiful healthcare for Patients, Caregivers, and Doctors.
-          </motion.p>
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4, duration: 0.5 }} className="mt-10 flex items-center gap-4">
-            <button onClick={() => setShowLanding(false)} className="group relative px-8 py-3 rounded-2xl text-white font-semibold">
-              <span className="absolute inset-0 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-500 to-green-600 animate-gradient-x" />
-              <span className="absolute -inset-[2px] rounded-2xl bg-gradient-to-r from-blue-400/60 via-indigo-300/60 to-green-400/60 blur opacity-70 group-hover:opacity-90 transition" />
-              <span className="relative z-10 flex items-center gap-2">
-                Get Started
-                <Sparkles className="w-4 h-4 opacity-90 group-hover:animate-ping" />
-              </span>
-            </button>
-          </motion.div>
-        </div>
-      </div>
-    );
-  };
-
-  const FamilyMemberSelector: React.FC = () => {
-    if (!currentFamily || currentFamily.members.length <= 1 || currentUser?.role === 'caregiver' || currentUser?.role === 'doctor') return null;
-    
-    return (
-      <div className="bg-gradient-to-r from-white/80 to-blue-50/50 backdrop-blur-lg p-4 rounded-2xl shadow-xl border border-blue-100/50 mb-6">
-        <h3 className="text-lg font-bold mb-4 text-gray-800 flex items-center">
-          <Users className="h-5 w-5 mr-2 text-blue-600" />
-          Select Family Member
-        </h3>
-        <div className="flex flex-wrap gap-3">
-          {currentFamily.members.map((member) => (
-            <button
-              key={member.user_id}
-              onClick={() => setSelectedMember(member)}
-              className={`flex items-center space-x-3 p-3 rounded-xl transition-all duration-300 font-medium ${
-                selectedMember?.user_id === member.user_id
-                  ? 'bg-gradient-to-r from-blue-500 to-green-500 text-white shadow-lg transform scale-105'
-                  : 'bg-white/60 text-gray-700 hover:bg-blue-100 hover:text-blue-700'
-              }`}
-            >
-              <div className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                selectedMember?.user_id === member.user_id ? 'bg-white/20' : 'bg-gradient-to-br from-blue-400 to-green-400'
-              }`}>
-                {member.gender === 'female' ? '👩' : '👨'}
-              </div>
-              <div className="text-left">
-                <p className="text-sm font-semibold">{member.name}</p>
-                <p className="text-xs opacity-75">{member.relationship || member.role}</p>
-              </div>
-            </button>
-          ))}
         </div>
       </div>
     );
@@ -1630,7 +807,7 @@ const AegisLink: React.FC = () => {
         if (currentUser) {
           const updatedUser = { ...currentUser, points: userPoints - coupon.points_required };
           setCurrentUser(updatedUser);
-          localStorage.setItem('aegis_user', JSON.stringify(updatedUser));
+          saveUser(updatedUser);
         }
         alert(`Successfully redeemed: ${coupon.title}! You now have ${userPoints - coupon.points_required} points.`);
         onClose();
@@ -2898,7 +2075,7 @@ const AegisLink: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
             <div className="h-12 w-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center">
-              <User className="h-7 w-7 text-white" />
+              <UserIcon className="h-7 w-7 text-white" />
             </div>
             <div>
               <h3 className="font-bold text-gray-800">{patient.name}</h3>
@@ -3604,11 +2781,23 @@ const AegisLink: React.FC = () => {
 
       switch (activeTab) {
         case 'medications':
-          return <MedicationManager />;
+          return (
+            <MedicationManager
+              selectedMember={selectedMember}
+              medications={medications}
+              setMedications={setMedications}
+            />
+          );
         case 'appointments':
-          return <AppointmentManager />;
+          return (
+            <AppointmentManager
+              selectedMember={selectedMember}
+              appointments={appointments}
+              setAppointments={setAppointments}
+            />
+          );
         case 'vitals':
-          return <VitalManager />;
+          return <VitalManager selectedMember={selectedMember} vitals={vitals} setVitals={setVitals} />;
         case 'insights':
           return (
             <div className="space-y-6">
@@ -3665,7 +2854,7 @@ const AegisLink: React.FC = () => {
             </div>
           );
         case 'goals':
-          return <HealthGoalsManager />;
+          return <HealthGoalsManager selectedMember={selectedMember} healthGoals={healthGoals} setHealthGoals={setHealthGoals} />;
         case 'emergency':
           return <EmergencyContactsManager />;
         default:
@@ -3752,7 +2941,14 @@ const AegisLink: React.FC = () => {
         </header>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {currentUser?.role !== 'patient' && <FamilyMemberSelector />}
+          {currentUser?.role !== 'patient' && (
+            <FamilyMemberSelector
+              currentFamily={currentFamily}
+              currentUser={currentUser}
+              selectedMember={selectedMember}
+              onSelectMember={setSelectedMember}
+            />
+          )}
           
           <div className="flex gap-8">
             <nav className="w-72 relative">
@@ -3878,221 +3074,6 @@ const AegisLink: React.FC = () => {
         {showPointsStore && <PointsStoreModal onClose={() => setShowPointsStore(false)} />}
         {showSymptomChecker && <AISymptomChecker onClose={() => setShowSymptomChecker(false)} />}
         {showPredictiveInsights && <PredictiveHealthInsights onClose={() => setShowPredictiveInsights(false)} />}
-      </div>
-    );
-  };
-
-  // Component implementations for medication, appointment, vital, and goal management
-  const MedicationManager: React.FC = () => {
-    const memberId = selectedMember?.user_id || '';
-    const memberMeds = medications.filter(m => m.member_id === memberId);
-    const [newMed, setNewMed] = useState({ name: '', dosage: '', frequency: 'once daily', time: '08:00' });
-    const addMedication = () => {
-      const med: Medication = {
-        id: Date.now().toString(),
-        name: newMed.name || 'New Medication',
-        dosage: newMed.dosage || '10mg',
-        frequency: newMed.frequency,
-        times: [newMed.time],
-        start_date: new Date().toISOString().slice(0,10),
-        active: true,
-        taken_today: false,
-        member_id: memberId
-      };
-      setMedications([...medications, med]);
-      setNewMed({ name: '', dosage: '', frequency: 'once daily', time: '08:00' });
-    };
-    return (
-      <div className="space-y-6">
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h3 className="text-xl font-bold mb-4">Medications for {selectedMember?.name}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {memberMeds.map(m => (
-              <div key={m.id} className="relative p-[1px] rounded-2xl overflow-hidden group">
-                <div className="absolute -inset-[1px] bg-gradient-to-br from-blue-400 via-indigo-300 to-emerald-400 opacity-60 blur-md group-hover:opacity-90 transition"></div>
-                <div className="relative p-4 bg-white/80 rounded-2xl border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-800">{m.name}</span>
-                    <span className={`text-xs px-2 py-1 rounded-full ${m.taken_today ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{m.taken_today ? 'Taken' : 'Due'}</span>
-                  </div>
-                  <p className="text-sm text-gray-600">{m.dosage} • {m.frequency}</p>
-                  <p className="text-sm text-gray-600">Times: {m.times.join(', ')}</p>
-                  <div className="flex space-x-2 mt-3">
-                    <button onClick={() => setMedications(medications.map(x => x.id===m.id?{...x, taken_today: true}:x))} className="flex-1 bg-green-500 text-white py-2 rounded-xl">Mark Taken</button>
-                    <button onClick={() => setMedications(medications.filter(x => x.id!==m.id))} className="flex-1 bg-red-500 text-white py-2 rounded-xl">Remove</button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h4 className="font-bold mb-3">Add Medication</h4>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input className="p-3 border rounded-xl" placeholder="Name" value={newMed.name} onChange={e=>setNewMed({...newMed, name:e.target.value})} />
-            <input className="p-3 border rounded-xl" placeholder="Dosage" value={newMed.dosage} onChange={e=>setNewMed({...newMed, dosage:e.target.value})} />
-            <select className="p-3 border rounded-xl" value={newMed.frequency} onChange={e=>setNewMed({...newMed, frequency:e.target.value})}>
-              <option>once daily</option>
-              <option>twice daily</option>
-              <option>thrice daily</option>
-            </select>
-            <input type="time" className="p-3 border rounded-xl" value={newMed.time} onChange={e=>setNewMed({...newMed, time:e.target.value})} />
-          </div>
-          <button onClick={addMedication} className="mt-3 bg-blue-500 text-white px-6 py-3 rounded-xl">Add</button>
-        </div>
-      </div>
-    );
-  };
-
-  const AppointmentManager: React.FC = () => {
-    const memberId = selectedMember?.user_id || '';
-    const memberAppts = appointments.filter(a => a.member_id === memberId);
-    const [newAppt, setNewAppt] = useState({ title: '', type: 'doctor' as 'doctor'|'telemedicine'|'lab_test', when: '' });
-    const addAppt = () => {
-      const appt: Appointment = { id: Date.now().toString(), title: newAppt.title || 'Checkup', type: newAppt.type, appointment_date: newAppt.when || new Date().toISOString(), member_id: memberId, status: 'scheduled' };
-      setAppointments([...appointments, appt]);
-      setNewAppt({ title: '', type: 'doctor', when: '' });
-    };
-    return (
-      <div className="space-y-6">
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h3 className="text-xl font-bold mb-4">Appointments for {selectedMember?.name}</h3>
-          <div className="space-y-3">
-            {memberAppts.map(a => (
-              <div key={a.id} className="p-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl border flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">{a.title}</p>
-                  <p className="text-sm text-gray-600">{a.type} • {new Date(a.appointment_date).toLocaleString()}</p>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700 capitalize">{a.status}</span>
-                  <button onClick={() => setAppointments(appointments.filter(x => x.id!==a.id))} className="bg-red-500 text-white px-3 py-2 rounded-xl">Cancel</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h4 className="font-bold mb-3">Add Appointment</h4>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input className="p-3 border rounded-xl" placeholder="Title" value={newAppt.title} onChange={e=>setNewAppt({...newAppt, title:e.target.value})} />
-            <select className="p-3 border rounded-xl" value={newAppt.type} onChange={e=>setNewAppt({...newAppt, type:e.target.value as any})}>
-              <option value="doctor">doctor</option>
-              <option value="telemedicine">telemedicine</option>
-              <option value="lab_test">lab_test</option>
-            </select>
-            <input type="datetime-local" className="p-3 border rounded-xl" value={newAppt.when} onChange={e=>setNewAppt({...newAppt, when:e.target.value})} />
-            <button onClick={addAppt} className="bg-blue-500 text-white px-6 py-3 rounded-xl">Add</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const VitalManager: React.FC = () => {
-    const memberId = selectedMember?.user_id || '';
-    const memberVitals = vitals.filter(v => v.member_id === memberId);
-    const [newVital, setNewVital] = useState({ type: 'bp', value: '', unit: '' });
-    const addVital = () => {
-      const v: Vital = { id: Date.now().toString(), type: newVital.type, value: newVital.value || '120/80', unit: newVital.unit || (newVital.type==='weight'?'kg':'mmHg'), recorded_at: new Date().toISOString(), member_id: memberId };
-      setVitals([v, ...vitals]);
-      setNewVital({ type: 'bp', value: '', unit: '' });
-    };
-    const chartData = memberVitals.slice(0,8).map(v => parseInt(v.value.split('/')[0]) || parseInt(v.value));
-    const chartLabels = memberVitals.slice(0,8).map(v => new Date(v.recorded_at).toLocaleDateString());
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 relative">
-            <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-r from-blue-400 via-indigo-300 to-emerald-400 opacity-50 blur"></div>
-            <div className="relative bg-white/80 p-6 rounded-2xl border">
-            <h3 className="text-xl font-bold mb-4">Vitals Trend</h3>
-            <LineChart data={chartData.length?chartData:[110,115,118,120,119,117]} labels={chartLabels.length?chartLabels:['Jan','Feb','Mar','Apr','May','Jun']} title="Systolic BP" />
-            </div>
-          </div>
-          <div className="relative">
-            <div className="absolute -inset-[1px] rounded-3xl bg-gradient-to-br from-emerald-400 via-cyan-300 to-blue-400 opacity-50 blur"></div>
-            <div className="relative bg-white/80 p-6 rounded-2xl border">
-            <h4 className="font-bold mb-3">Add Vital</h4>
-            <div className="space-y-2">
-              <select className="w-full p-3 border rounded-xl" value={newVital.type} onChange={e=>setNewVital({...newVital, type:e.target.value as any})}>
-                <option value="bp">Blood Pressure</option>
-                <option value="weight">Weight</option>
-                <option value="hr">Heart Rate</option>
-              </select>
-              <input className="w-full p-3 border rounded-xl" placeholder="Value" value={newVital.value} onChange={e=>setNewVital({...newVital, value:e.target.value})} />
-              <input className="w-full p-3 border rounded-xl" placeholder="Unit" value={newVital.unit} onChange={e=>setNewVital({...newVital, unit:e.target.value})} />
-              <button onClick={addVital} className="group w-full bg-blue-500 text-white py-3 rounded-xl relative overflow-hidden">
-                <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition" />
-                <span className="relative z-10">Add</span>
-              </button>
-            </div>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h4 className="font-bold mb-3">Recent Vitals</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {memberVitals.map(v => (
-              <div key={v.id} className="relative p-[1px] rounded-2xl overflow-hidden group">
-                <div className="absolute -inset-[1px] bg-gradient-to-br from-blue-400 via-indigo-300 to-emerald-400 opacity-60 blur-md group-hover:opacity-90 transition"></div>
-                <div className="relative p-4 bg-white/80 rounded-2xl border">
-                  <p className="font-semibold text-gray-800 capitalize">{v.type}</p>
-                  <p className="text-sm text-gray-600">{v.value} {v.unit}</p>
-                  <p className="text-xs text-gray-500">{new Date(v.recorded_at).toLocaleString()}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const HealthGoalsManager: React.FC = () => {
-    const memberId = selectedMember?.user_id || '';
-    const memberGoals = healthGoals.filter(g => g.member_id === memberId);
-    const [newGoal, setNewGoal] = useState({ title: '', target_value: 1000, unit: 'steps' });
-    const addGoal = () => {
-      const g: HealthGoal = { id: Date.now().toString(), title: newGoal.title || 'New Goal', target_value: Number(newGoal.target_value), current_value: 0, unit: newGoal.unit, deadline: new Date(Date.now()+7*864e5).toISOString().slice(0,10), member_id: memberId, completed: false };
-      setHealthGoals([...healthGoals, g]);
-      setNewGoal({ title: '', target_value: 1000, unit: 'steps' });
-    };
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {memberGoals.map(g => (
-            <div key={g.id} className="p-4 bg-white/80 rounded-2xl border">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-semibold text-gray-800">{g.title}</p>
-                  <p className="text-sm text-gray-600">{g.current_value}/{g.target_value} {g.unit}</p>
-                </div>
-                <span className={`text-xs px-2 py-1 rounded-full ${g.completed?'bg-green-100 text-green-700':'bg-yellow-100 text-yellow-700'}`}>{g.completed?'Done':'In Progress'}</span>
-              </div>
-              <div className="w-full bg-gray-200 h-2 rounded-full mt-3">
-                <div className="bg-green-500 h-2 rounded-full" style={{ width: `${Math.min(100, Math.round((g.current_value/g.target_value)*100))}%` }} />
-              </div>
-              <div className="flex space-x-2 mt-3">
-                <button onClick={() => setHealthGoals(healthGoals.map(x => x.id===g.id?{...x, current_value: Math.min(x.target_value, x.current_value + Math.ceil(x.target_value*0.1))}:x))} className="flex-1 bg-blue-500 text-white py-2 rounded-xl">Add Progress</button>
-                <button onClick={() => setHealthGoals(healthGoals.map(x => x.id===g.id?{...x, completed: true, current_value: x.target_value}:x))} className="flex-1 bg-green-500 text-white py-2 rounded-xl">Complete</button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="bg-white/80 p-6 rounded-2xl border">
-          <h4 className="font-bold mb-3">Add Goal</h4>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <input className="p-3 border rounded-xl" placeholder="Title" value={newGoal.title} onChange={e=>setNewGoal({...newGoal, title:e.target.value})} />
-            <input type="number" className="p-3 border rounded-xl" placeholder="Target" value={newGoal.target_value} onChange={e=>setNewGoal({...newGoal, target_value:Number(e.target.value)})} />
-            <select className="p-3 border rounded-xl" value={newGoal.unit} onChange={e=>setNewGoal({...newGoal, unit:e.target.value})}>
-              <option value="steps">steps</option>
-              <option value="minutes">minutes</option>
-              <option value="kg">kg</option>
-            </select>
-            <button onClick={addGoal} className="bg-blue-500 text-white px-6 py-3 rounded-xl">Add</button>
-          </div>
-        </div>
       </div>
     );
   };
@@ -4302,8 +3283,15 @@ const AegisLink: React.FC = () => {
   });
 
   if (!currentUser || !currentFamily) {
-    if (showLanding) return <Landing />;
-    return <AuthForm />;
+    if (showLanding) return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+    return (
+      <AuthForm
+        authMode={authMode}
+        onAuthModeChange={setAuthMode}
+        loading={loading}
+        onSubmit={formData => handleAuth(formData, authMode === 'login')}
+      />
+    );
   }
 
   return <MainApp />;
