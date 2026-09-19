@@ -119,3 +119,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ currentUser: updated });
   }
 }));
+

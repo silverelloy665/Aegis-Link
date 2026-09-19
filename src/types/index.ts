@@ -102,3 +102,12 @@ export interface Coupon {
   category: string;
   expires_at: string;
 }
+
+export interface AIHealthInsight {
+  risk_level: 'high' | 'low' | 'unknown';
+  recommendations: string[];
+  predicted_trends: string;
+  confidence: number;
+}
+
+export type AIInsight = AIHealthInsight;
