@@ -35,12 +35,102 @@ import HealthGoalsManager from './features/goals/HealthGoalsManager';
 import BarChart from './components/charts/BarChart';
 import DonutChart from './components/charts/DonutChart';
 import LineChart from './components/charts/LineChart';
+import EmergencyContactsManager from './features/emergency/EmergencyContactsManager';
+import MenstrualTracker from './features/menstrual/MenstrualTracker';
+import EnhancedWellnessChallenges from './features/wellness/EnhancedWellnessChallenges';
+import Chatbot from './features/chatbot/Chatbot';
+
 
 const AegisLink: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+                    placeholder="Age"
+                    className="p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                    value={formData.age}
+                    onChange={(e) => setFormData({...formData, age: e.target.value})}
+                    required
+                  />
+                  <select
+                    className="p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                    value={formData.gender}
+                    onChange={(e) => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
+                  >
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                </div>
+                
+                <select
+                  className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                >
+                  <option value="patient">Patient</option>
+                  <option value="caregiver">Caregiver</option>
+                  <option value="doctor">Doctor</option>
+                </select>
+                
+                <input
+                  type="tel"
+                  placeholder="Phone Number (Optional)"
+                  className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                />
+                
+                {(formData.role === 'patient' || formData.role === 'family_member') && (
+                <div className="bg-green-50/50 p-4 rounded-xl">
+                  <label className="flex items-center space-x-3">
+                    <input
+                      type="checkbox"
+                      className="form-checkbox h-5 w-5 text-blue-500 rounded"
+                      checked={formData.joinFamily}
+                      onChange={(e) => setFormData({...formData, joinFamily: e.target.checked})}
+                    />
+                    <span className="text-sm font-medium text-gray-700">Join existing family</span>
+                  </label>
+                  
+                  {formData.joinFamily ? (
+                    <input
+                      type="text"
+                      placeholder="Family ID"
+                      className="w-full mt-3 p-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                      value={formData.familyId}
+                      onChange={(e) => setFormData({...formData, familyId: e.target.value})}
+                      required={formData.joinFamily}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Family Name"
+                      className="w-full mt-3 p-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+                      value={formData.familyName}
+                      onChange={(e) => setFormData({...formData, familyName: e.target.value})}
+                    />
+                  )}
+                </div>
+                )}
+              </>
+            )}
+            
+            <input
+              type="email"
+              placeholder="Email"
+              className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              required
+            />
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(false);
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -66,6 +156,21 @@ const AegisLink: React.FC = () => {
   const navTimeoutRef = React.useRef<number | null>(null);
   const initRef = React.useRef(false);
 
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-blue-500 to-green-500 text-white py-4 rounded-xl hover:from-blue-600 hover:to-green-600 transition-all duration-300 disabled:opacity-50 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Please wait...</span>
+                </div>
+              ) : (
+                authMode === 'login' ? 'Login' : 'Sign Up'
+              )}
+            </button>
+          </form>
   const navigateTo = useCallback((tabKey: string, label?: string) => {
     if (navTimeoutRef.current) {
       clearTimeout(navTimeoutRef.current);
@@ -79,6 +184,13 @@ const AegisLink: React.FC = () => {
     }, 550);
   }, []);
 
+          <div className="mt-6 text-center text-sm text-gray-600 bg-blue-50/30 p-4 rounded-xl">
+            <p className="mb-2 font-medium">Demo Access:</p>
+            <p>Use any email/password to explore the family health system</p>
+          </div>
+        </div>
+      </div>
+    );
   useEffect(() => {
     return () => {
       if (navTimeoutRef.current) {
@@ -2769,6 +2881,13 @@ const AegisLink: React.FC = () => {
         }
         if (activeTab === 'emergency') {
           return <EmergencyContactsManager />;
+          return (
+            <EmergencyContactsManager
+              currentFamily={currentFamily}
+              emergencyContacts={emergencyContacts}
+              setEmergencyContacts={setEmergencyContacts}
+            />
+          );
         }
       }
 
@@ -2855,6 +2974,13 @@ const AegisLink: React.FC = () => {
           return <HealthGoalsManager selectedMember={selectedMember} healthGoals={healthGoals} setHealthGoals={setHealthGoals} />;
         case 'emergency':
           return <EmergencyContactsManager />;
+          return (
+            <EmergencyContactsManager
+              currentFamily={currentFamily}
+              emergencyContacts={emergencyContacts}
+              setEmergencyContacts={setEmergencyContacts}
+            />
+          );
         default:
           return <PatientDashboard />;
       }
@@ -3032,6 +3158,14 @@ const AegisLink: React.FC = () => {
         </div>
 
         <Chatbot />
+        <Chatbot
+          currentUser={currentUser}
+          selectedMember={selectedMember}
+          currentFamily={currentFamily}
+          medications={medications}
+          showChatbot={showChatbot}
+          setShowChatbot={setShowChatbot}
+        />
 
         {frameLoading.visible && (
           <motion.div 
@@ -3185,6 +3319,14 @@ const AegisLink: React.FC = () => {
         </div>
 
         {selectedMember?.gender === 'female' && <MenstrualTracker />}
+        {selectedMember?.gender === 'female' && (
+          <MenstrualTracker
+            selectedMember={selectedMember}
+            currentUser={currentUser}
+            menstrualData={menstrualData}
+            setMenstrualData={setMenstrualData}
+          />
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
