@@ -1,11 +1,14 @@
-import React, { useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Sparkles } from 'lucide-react';
 import { useAuthStore, useHealthDataStore, useUIStore } from '../../store';
+import { useToastStore } from '../../store/toastStore';
 import AppHeader from './AppHeader';
 import AppSidebar from './AppSidebar';
 import LoadingFrame from './LoadingFrame';
 import FamilyMemberSelector from './FamilyMemberSelector';
+import ToastContainer from '../common/ToastContainer';
+import ConfirmDialog from '../common/ConfirmDialog';
 import DoctorDashboard from '../../pages/DoctorDashboard';
 import CaregiverDashboard from '../../pages/CaregiverDashboard';
 import PatientDashboard from '../../pages/PatientDashboard';
@@ -61,13 +64,18 @@ export const AppShell: React.FC = () => {
     navigateTo
   } = useUIStore();
 
-  useEffect(() => {
-    const previous = document.body.style.background;
-    document.body.style.background = 'linear-gradient(135deg, #fff9db 0%, #e6f0ff 50%, #eafff1 100%)';
-    return () => {
-      document.body.style.background = previous;
-    };
-  }, []);
+  const { showToast } = useToastStore();
+  const [showSosConfirm, setShowSosConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const handleSosConfirm = () => {
+    showToast('🚨 Family Emergency SOS activated! All contacts and family notified.', 'error');
+  };
+
+  const handleLogoutConfirm = () => {
+    logout();
+    showToast('You have been logged out.', 'info');
+  };
 
   const renderContent = () => {
     if (currentUser?.role === 'doctor') {
@@ -153,13 +161,13 @@ export const AppShell: React.FC = () => {
           <div className="space-y-6">
             <div className="relative p-[2px] rounded-3xl overflow-hidden">
               <div className="absolute -inset-[2px] bg-gradient-to-r from-purple-400 via-pink-300 to-fuchsia-400 opacity-70 blur" />
-              <div className="relative rounded-3xl bg-white/70 backdrop-blur-xl p-6">
+              <div className="relative rounded-3xl bg-white/70 dark:bg-gray-800/80 backdrop-blur-xl p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="text-2xl font-extrabold bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">
                       AI Insights
                     </h3>
-                    <p className="text-gray-600">Personalized, live health intelligence</p>
+                    <p className="text-gray-600 dark:text-gray-400">Personalized, live health intelligence</p>
                   </div>
                   <div className="flex gap-3">
                     <button
@@ -182,29 +190,29 @@ export const AppShell: React.FC = () => {
                 </div>
 
                 <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 rounded-2xl bg-white/70 border">
-                    <p className="text-xs text-gray-500">Risk Level</p>
-                    <p className="text-xl font-bold text-purple-700">{aiInsights?.risk_level || 'low'}</p>
+                  <div className="p-4 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Risk Level</p>
+                    <p className="text-xl font-bold text-purple-700 dark:text-purple-400">{aiInsights?.risk_level || 'low'}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-white/70 border">
-                    <p className="text-xs text-gray-500">Confidence</p>
-                    <p className="text-xl font-bold text-indigo-700">
+                  <div className="p-4 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Confidence</p>
+                    <p className="text-xl font-bold text-indigo-700 dark:text-indigo-400">
                       {aiInsights ? `${Math.round(aiInsights.confidence * 100)}%` : '—'}
                     </p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-white/70 border md:col-span-1">
-                    <p className="text-xs text-gray-500">Trend</p>
-                    <p className="text-sm text-gray-700">{aiInsights?.predicted_trends || 'Stable'}</p>
+                  <div className="p-4 rounded-2xl bg-white/70 dark:bg-gray-800/70 border border-gray-100 dark:border-gray-700 md:col-span-1">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Trend</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">{aiInsights?.predicted_trends || 'Stable'}</p>
                   </div>
                 </div>
 
-                <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200">
-                  <p className="text-sm text-gray-700 font-medium">Recommendations</p>
+                <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800/60 border border-purple-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">Recommendations</p>
                   <ul className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
                     {(aiInsights?.recommendations || ['Stay hydrated', 'Daily walk 20 min', 'Sleep 7-8h']).map(
                       (rec: string, i: number) => (
-                        <li key={i} className="flex items-center gap-2 text-sm">
-                          <Sparkles className="w-4 h-4 text-purple-600" />
+                        <li key={i} className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                           <span>{rec}</span>
                         </li>
                       )
@@ -244,13 +252,14 @@ export const AppShell: React.FC = () => {
             setMenstrualData={setMenstrualData}
             aiInsights={aiInsights}
             navigateTo={navigateTo}
+            onEmergencySOS={() => setShowSosConfirm(true)}
           />
         );
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50/30 via-blue-50/20 to-green-50/40 transition-all duration-300">
+    <div className="min-h-screen bg-gradient-to-br from-yellow-50/30 via-blue-50/20 to-green-50/40 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300 pb-20 md:pb-8">
       <AppHeader
         currentUser={currentUser}
         currentFamily={currentFamily}
@@ -259,7 +268,7 @@ export const AppShell: React.FC = () => {
         onOpenTelemedicine={() => setShowTelemedicine(true)}
         onOpenTelepharmacy={() => setShowTelepharmacy(true)}
         onOpenPointsStore={() => setShowPointsStore(true)}
-        onLogout={logout}
+        onLogout={() => setShowLogoutConfirm(true)}
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -337,8 +346,32 @@ export const AppShell: React.FC = () => {
       {showPredictiveInsights && (
         <PredictiveHealthInsights onClose={() => setShowPredictiveInsights(false)} />
       )}
+
+      <ConfirmDialog
+        isOpen={showSosConfirm}
+        onClose={() => setShowSosConfirm(false)}
+        onConfirm={handleSosConfirm}
+        title="Activate Emergency SOS?"
+        message="Are you sure you want to activate the family emergency SOS? This will notify all family members and emergency contacts immediately with your location and recent health vitals."
+        confirmText="Activate SOS"
+        cancelText="Cancel"
+        isDestructive={true}
+      />
+
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogoutConfirm}
+        title="Sign Out"
+        message="Are you sure you want to sign out of your Aegis Link account?"
+        confirmText="Sign Out"
+        cancelText="Stay Logged In"
+      />
+
+      <ToastContainer />
     </div>
   );
 };
 
 export default AppShell;
+
