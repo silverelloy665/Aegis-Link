@@ -39,6 +39,12 @@ import EmergencyContactsManager from './features/emergency/EmergencyContactsMana
 import MenstrualTracker from './features/menstrual/MenstrualTracker';
 import EnhancedWellnessChallenges from './features/wellness/EnhancedWellnessChallenges';
 import Chatbot from './features/chatbot/Chatbot';
+import TelemedicineModal from './features/telemedicine/TelemedicineModal';
+import AISymptomChecker from './features/symptom-checker';
+import TelepharmacyModal from './features/telepharmacy/TelepharmacyModal';
+import PointsStoreModal from './features/rewards/PointsStoreModal';
+import PredictiveHealthInsights from './features/insights/PredictiveHealthInsights';
+
 
 
 const AegisLink: React.FC = () => {
@@ -191,75 +197,6 @@ const AegisLink: React.FC = () => {
         </div>
       </div>
     );
-  useEffect(() => {
-    return () => {
-      if (navTimeoutRef.current) {
-        clearTimeout(navTimeoutRef.current);
-        navTimeoutRef.current = null;
-      }
-    };
-  }, []);
-
-  const generatingInsightsRef = React.useRef(false);
-  const generateAIInsights = async (user: User) => {
-    if (generatingInsightsRef.current) return;
-    generatingInsightsRef.current = true;
-    const memberVitals = vitals.filter(v => v.member_id === user.user_id);
-    const insights = await getAIHealthInsight(memberVitals, [], user);
-    setAiInsights(insights);
-    generatingInsightsRef.current = false;
-  };
-
-  const applySampleData = useCallback((user: User, family: Family | null) => {
-    const data = createSampleData(user, family);
-    setMedications(data.medications);
-    setAppointments(data.appointments);
-    setVitals(data.vitals);
-    setEmergencyContacts(data.emergencyContacts);
-    setHealthGoals(data.healthGoals);
-    setWellnessChallenges(data.wellnessChallenges);
-    setMenstrualData(data.menstrualData);
-    generateAIInsights(user);
-  }, []);
-
-  useEffect(() => {
-    if (initRef.current) return;
-    initRef.current = true;
-    const userData = getStoredUser();
-    const familyData = getStoredFamily();
-    if (userData && familyData) {
-      setCurrentUser(userData);
-      setCurrentFamily(familyData);
-      setSelectedMember(userData);
-      applySampleData(userData, familyData);
-    }
-  }, [applySampleData]);
-
-  useLiveVitals(currentFamily, setVitals);
-
-  const handleAuth = async (formData: any, isLogin: boolean) => {
-    setLoading(true);
-    try {
-      const result = await authenticate(formData, isLogin);
-      setCurrentUser(result.user);
-      setCurrentFamily(result.family);
-      setSelectedMember(result.user);
-      saveSession(result.user, result.family);
-      applySampleData(result.user, result.family);
-    } catch (error) {
-      alert('Authentication failed. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const logout = () => {
-    clearSession();
-    setCurrentUser(null);
-    setCurrentFamily(null);
-    setSelectedMember(null);
-    setActiveTab('dashboard');
-    setShowLanding(true);
   };
 
   const TelemedicineModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -471,6 +408,11 @@ const AegisLink: React.FC = () => {
           confidence: 0.65,
           patterns: recentSimilar.length > 0 ? `Mild recurring symptoms` : null
         };
+  useEffect(() => {
+    return () => {
+      if (navTimeoutRef.current) {
+        clearTimeout(navTimeoutRef.current);
+        navTimeoutRef.current = null;
       }
     }, [symptomHistory]);
     
@@ -795,6 +737,7 @@ const AegisLink: React.FC = () => {
     const addToCart = (medication: any) => {
       setCart([...cart, { ...medication, quantity: 1 }]);
     };
+  }, []);
 
     const placeOrder = () => {
       if (cart.length === 0) return;
@@ -906,11 +849,30 @@ const AegisLink: React.FC = () => {
         </div>
       </div>
     );
+  const generatingInsightsRef = React.useRef(false);
+  const generateAIInsights = async (user: User) => {
+    if (generatingInsightsRef.current) return;
+    generatingInsightsRef.current = true;
+    const memberVitals = vitals.filter(v => v.member_id === user.user_id);
+    const insights = await getAIHealthInsight(memberVitals, [], user);
+    setAiInsights(insights);
+    generatingInsightsRef.current = false;
   };
 
   const PointsStoreModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const userPoints = currentUser?.points || 0;
     const [selectedCoupon, setSelectedCoupon] = useState<Coupon | null>(null);
+  const applySampleData = useCallback((user: User, family: Family | null) => {
+    const data = createSampleData(user, family);
+    setMedications(data.medications);
+    setAppointments(data.appointments);
+    setVitals(data.vitals);
+    setEmergencyContacts(data.emergencyContacts);
+    setHealthGoals(data.healthGoals);
+    setWellnessChallenges(data.wellnessChallenges);
+    setMenstrualData(data.menstrualData);
+    generateAIInsights(user);
+  }, []);
 
     const redeemCoupon = (coupon: Coupon) => {
       if (userPoints >= coupon.points_required) {
@@ -925,6 +887,18 @@ const AegisLink: React.FC = () => {
         alert(`You need ${coupon.points_required - userPoints} more points to redeem this coupon.`);
       }
     };
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    const userData = getStoredUser();
+    const familyData = getStoredFamily();
+    if (userData && familyData) {
+      setCurrentUser(userData);
+      setCurrentFamily(familyData);
+      setSelectedMember(userData);
+      applySampleData(userData, familyData);
+    }
+  }, [applySampleData]);
 
     return (
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -948,6 +922,7 @@ const AegisLink: React.FC = () => {
                 <XCircle className="h-6 w-6 text-gray-500" />
               </button>
             </div>
+  useLiveVitals(currentFamily, setVitals);
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {sampleCoupons.map((coupon) => (
@@ -1016,6 +991,20 @@ const AegisLink: React.FC = () => {
         </div>
       </div>
     );
+  const handleAuth = async (formData: any, isLogin: boolean) => {
+    setLoading(true);
+    try {
+      const result = await authenticate(formData, isLogin);
+      setCurrentUser(result.user);
+      setCurrentFamily(result.family);
+      setSelectedMember(result.user);
+      saveSession(result.user, result.family);
+      applySampleData(result.user, result.family);
+    } catch (error) {
+      alert('Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const PredictiveHealthInsights: React.FC<{ onClose: () => void }> = ({ onClose }) => {
@@ -1073,6 +1062,13 @@ const AegisLink: React.FC = () => {
         </div>
       </div>
     );
+  const logout = () => {
+    clearSession();
+    setCurrentUser(null);
+    setCurrentFamily(null);
+    setSelectedMember(null);
+    setActiveTab('dashboard');
+    setShowLanding(true);
   };
   const EnhancedWellnessChallenges: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [selectedChallenge, setSelectedChallenge] = useState<WellnessChallenge | null>(null);
@@ -3202,10 +3198,28 @@ const AegisLink: React.FC = () => {
         )}
         
         {showTelemedicine && <TelemedicineModal onClose={() => setShowTelemedicine(false)} />}
+        {showTelemedicine && (
+          <TelemedicineModal
+            onClose={() => setShowTelemedicine(false)}
+            selectedMember={selectedMember}
+            appointments={appointments}
+            setAppointments={setAppointments}
+          />
+        )}
         {showTelepharmacy && <TelepharmacyModal onClose={() => setShowTelepharmacy(false)} />}
         {showPointsStore && <PointsStoreModal onClose={() => setShowPointsStore(false)} />}
+        {showPointsStore && (
+          <PointsStoreModal
+            onClose={() => setShowPointsStore(false)}
+            currentUser={currentUser}
+            setCurrentUser={setCurrentUser}
+          />
+        )}
         {showSymptomChecker && <AISymptomChecker onClose={() => setShowSymptomChecker(false)} />}
         {showPredictiveInsights && <PredictiveHealthInsights onClose={() => setShowPredictiveInsights(false)} />}
+        {showPredictiveInsights && (
+          <PredictiveHealthInsights onClose={() => setShowPredictiveInsights(false)} />
+        )}
       </div>
     );
   };
