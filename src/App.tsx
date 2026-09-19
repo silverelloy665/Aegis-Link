@@ -41,115 +41,113 @@ const AegisLink: React.FC = () => {
   const [currentFamily, setCurrentFamily] = useState<Family | null>(null);
   const [selectedMember, setSelectedMember] = useState<User | null>(null);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-                    placeholder="Age"
-                    className="p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                    value={formData.age}
-                    onChange={(e) => setFormData({...formData, age: e.target.value})}
-                    required
-                  />
-                  <select
-                    className="p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                    value={formData.gender}
-                    onChange={(e) => setFormData({...formData, gender: e.target.value as 'male' | 'female'})}
-                  >
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                  </select>
-                </div>
-                
-                <select
-                  className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                  value={formData.role}
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
-                >
-                  <option value="patient">Patient</option>
-                  <option value="caregiver">Caregiver</option>
-                  <option value="doctor">Doctor</option>
-                </select>
-                
-                <input
-                  type="tel"
-                  placeholder="Phone Number (Optional)"
-                  className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                />
-                
-                {(formData.role === 'patient' || formData.role === 'family_member') && (
-                <div className="bg-green-50/50 p-4 rounded-xl">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      className="form-checkbox h-5 w-5 text-blue-500 rounded"
-                      checked={formData.joinFamily}
-                      onChange={(e) => setFormData({...formData, joinFamily: e.target.checked})}
-                    />
-                    <span className="text-sm font-medium text-gray-700">Join existing family</span>
-                  </label>
-                  
-                  {formData.joinFamily ? (
-                    <input
-                      type="text"
-                      placeholder="Family ID"
-                      className="w-full mt-3 p-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                      value={formData.familyId}
-                      onChange={(e) => setFormData({...formData, familyId: e.target.value})}
-                      required={formData.joinFamily}
-                    />
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Family Name"
-                      className="w-full mt-3 p-3 border-2 border-green-200 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-                      value={formData.familyName}
-                      onChange={(e) => setFormData({...formData, familyName: e.target.value})}
-                    />
-                  )}
-                </div>
-                )}
-              </>
-            )}
-            
-            <input
-              type="email"
-              placeholder="Email"
-              className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-              value={formData.email}
-              onChange={(e) => setFormData({...formData, email: e.target.value})}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              className="w-full p-4 border-2 border-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 bg-white/70 backdrop-blur-sm"
-              value={formData.password}
-              onChange={(e) => setFormData({...formData, password: e.target.value})}
-              required
-            />
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [loading, setLoading] = useState(false);
+  const [medications, setMedications] = useState<Medication[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [vitals, setVitals] = useState<Vital[]>([]);
+  const [menstrualData, setMenstrualData] = useState<MenstrualData[]>([]);
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [healthGoals, setHealthGoals] = useState<HealthGoal[]>([]);
+  const [wellnessChallenges, setWellnessChallenges] = useState<WellnessChallenge[]>([]);
+  const [showChatbot, setShowChatbot] = useState(false);
+  const [showTelemedicine, setShowTelemedicine] = useState(false);
+  const [showTelepharmacy, setShowTelepharmacy] = useState(false);
+  const [showPointsStore, setShowPointsStore] = useState(false);
+  const [aiInsights, setAiInsights] = useState<any>(null);
+  const [showFamilyView, setShowFamilyView] = useState(false);
+  const [showSymptomChecker, setShowSymptomChecker] = useState(false);
+  const [showPredictiveInsights, setShowPredictiveInsights] = useState(false);
+  const [showLanding, setShowLanding] = useState<boolean>(() => {
+    const userData = getStoredUser();
+    return !userData;
+  });
+  const [frameLoading, setFrameLoading] = useState<{ visible: boolean; label: string }>({ visible: false, label: '' });
+  const navTimeoutRef = React.useRef<number | null>(null);
+  const initRef = React.useRef(false);
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-blue-500 to-green-500 text-white py-4 rounded-xl hover:from-blue-600 hover:to-green-600 transition-all duration-300 disabled:opacity-50 font-semibold text-lg shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center space-x-2">
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Please wait...</span>
-                </div>
-              ) : (
-                authMode === 'login' ? 'Login' : 'Sign Up'
-              )}
-            </button>
-          </form>
+  const navigateTo = useCallback((tabKey: string, label?: string) => {
+    if (navTimeoutRef.current) {
+      clearTimeout(navTimeoutRef.current);
+      navTimeoutRef.current = null;
+    }
+    setFrameLoading({ visible: true, label: label || 'Loading' });
+    navTimeoutRef.current = window.setTimeout(() => {
+      setActiveTab(tabKey);
+      setFrameLoading({ visible: false, label: '' });
+      navTimeoutRef.current = null;
+    }, 550);
+  }, []);
 
-          <div className="mt-6 text-center text-sm text-gray-600 bg-blue-50/30 p-4 rounded-xl">
-            <p className="mb-2 font-medium">Demo Access:</p>
-            <p>Use any email/password to explore the family health system</p>
-          </div>
-        </div>
-      </div>
-    );
+  useEffect(() => {
+    return () => {
+      if (navTimeoutRef.current) {
+        clearTimeout(navTimeoutRef.current);
+        navTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const generatingInsightsRef = React.useRef(false);
+  const generateAIInsights = async (user: User) => {
+    if (generatingInsightsRef.current) return;
+    generatingInsightsRef.current = true;
+    const memberVitals = vitals.filter(v => v.member_id === user.user_id);
+    const insights = await getAIHealthInsight(memberVitals, [], user);
+    setAiInsights(insights);
+    generatingInsightsRef.current = false;
+  };
+
+  const applySampleData = useCallback((user: User, family: Family | null) => {
+    const data = createSampleData(user, family);
+    setMedications(data.medications);
+    setAppointments(data.appointments);
+    setVitals(data.vitals);
+    setEmergencyContacts(data.emergencyContacts);
+    setHealthGoals(data.healthGoals);
+    setWellnessChallenges(data.wellnessChallenges);
+    setMenstrualData(data.menstrualData);
+    generateAIInsights(user);
+  }, []);
+
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+    const userData = getStoredUser();
+    const familyData = getStoredFamily();
+    if (userData && familyData) {
+      setCurrentUser(userData);
+      setCurrentFamily(familyData);
+      setSelectedMember(userData);
+      applySampleData(userData, familyData);
+    }
+  }, [applySampleData]);
+
+  useLiveVitals(currentFamily, setVitals);
+
+  const handleAuth = async (formData: any, isLogin: boolean) => {
+    setLoading(true);
+    try {
+      const result = await authenticate(formData, isLogin);
+      setCurrentUser(result.user);
+      setCurrentFamily(result.family);
+      setSelectedMember(result.user);
+      saveSession(result.user, result.family);
+      applySampleData(result.user, result.family);
+    } catch (error) {
+      alert('Authentication failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const logout = () => {
+    clearSession();
+    setCurrentUser(null);
+    setCurrentFamily(null);
+    setSelectedMember(null);
+    setActiveTab('dashboard');
+    setShowLanding(true);
   };
 
   const TelemedicineModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
