@@ -1,4 +1,4 @@
-import React, { useState, type Dispatch, type SetStateAction } from 'react';
+import React, { useState } from 'react';
 import { MessageCircle } from 'lucide-react';
 import { Family, Medication, User } from '../../types';
 
@@ -8,7 +8,7 @@ interface ChatbotProps {
   currentFamily: Family | null;
   medications: Medication[];
   showChatbot: boolean;
-  setShowChatbot: Dispatch<SetStateAction<boolean>>;
+  setShowChatbot: (show: boolean) => void;
 }
 
 const Chatbot: React.FC<ChatbotProps> = ({
